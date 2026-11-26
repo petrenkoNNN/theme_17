@@ -9,7 +9,7 @@ export const getItems = () => {
   }
 };
 
-const saveItems = (items) => {
+export const saveItems = (items) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     return true;
@@ -19,6 +19,4 @@ const saveItems = (items) => {
   }
 };
 
-export const addItem = (item) => saveItems([...getItems(), item]);
-
-export const removeItem = (id) => saveItems(getItems().filter((item) => item.id !== id));
+export const addItem = (items, item) => saveItems([...items, item]);
