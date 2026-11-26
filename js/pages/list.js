@@ -1,4 +1,4 @@
-import { getItems, removeItem } from '../storage.js';
+import { getItems, saveItems } from '../storage.js';
 import { createElement, createHeader, createTable } from '../components.js';
 
 const compare = (key) => (a, b) => {
@@ -8,8 +8,6 @@ const compare = (key) => (a, b) => {
 
   return String(a[key]).localeCompare(String(b[key]));
 };
-
-const sortItems = (items, key) => [...items].sort(compare(key));
 
 const COLUMNS = [
   { key: 'name', title: 'Название' },
@@ -23,21 +21,24 @@ export const render = ({ navigate }) => {
   let items = getItems();
 
   const handleDelete = (id) => {
-    const isRemoved = removeItem(id);
+    const nextItems = items.filter((item) => item.id !== id);
+    const isSaved = saveItems(nextItems);
 
-    if (isRemoved) {
-      items = getItems();
-      table.update(items);
-    }
+    if (!isSaved) return;
+
+    items = nextItems;
+    table.update(items);
+  };
+
+  const handleSort = (key) => {
+    items = items.toSorted(compare(key));
+    table.update(items);
   };
 
   const table = createTable({
     columns: COLUMNS,
     actions: { delete: handleDelete },
-    onSort: (key) => {
-      items = sortItems(items, key);
-      table.update(items);
-    }
+    onSort: handleSort
   });
 
   table.update(items);
