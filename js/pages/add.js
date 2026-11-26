@@ -1,4 +1,4 @@
-import { addItem } from '../storage.js';
+import { addItem, getItems } from '../storage.js';
 import { createElement } from '../components.js';
 
 const FIELDS = [
@@ -18,53 +18,71 @@ const validators = {
   storageTime: { validate: (value) => !isNaN(Date.parse(value)), message: 'Укажите время хранения' }
 };
 
+const createInput = ({ name, placeholder, ...attrs }) => createElement('input', {
+  className: 'form-input',
+  attrs: { name, placeholder, required: '', ...attrs }
+});
+
+const createSubmitButton = () => createElement('button', {
+  className: 'button button--primary',
+  text: 'Добавить запись',
+  attrs: { type: 'submit' }
+});
+
+const createForm = (errorEl) => {
+  const form = createElement('form', { className: 'form', attrs: { novalidate: '' } });
+
+  form.append(...FIELDS.map(createInput), errorEl, createSubmitButton());
+
+  return form;
+};
+
+const findInvalidField = (formData) => Object.entries(validators)
+  .find(([name, { validate }]) => !validate(formData.get(name) ?? ''));
+
+const showFieldError = (form, errorEl, [name, { message }]) => {
+  errorEl.textContent = message;
+  form.querySelector(`[name="${name}"]`).focus();
+};
+
+const createItem = (formData) => ({
+  id: Date.now(),
+  ...Object.fromEntries(formData),
+  weight: +formData.get('weight')
+});
+
+const handleSubmit = (event, { form, errorEl, navigate }) => {
+  event.preventDefault();
+
+  const formData = new FormData(form);
+  const invalidField = findInvalidField(formData);
+
+  if (invalidField) {
+    showFieldError(form, errorEl, invalidField);
+    return;
+  }
+
+  const isAdded = addItem(getItems(), createItem(formData));
+
+  if (!isAdded) {
+    errorEl.textContent = 'Не удалось сохранить запись';
+    return;
+  }
+
+  navigate('list');
+};
+
 export const render = ({ navigate }) => {
   const page = createElement('div');
-  page.append(createElement('h1', { className: 'page-title page-title--center', text: 'Добавить запись' }));
-
-  const form = createElement('form', { className: 'form', attrs: { novalidate: '' } });
   const errorEl = createElement('p', { className: 'form-error' });
+  const form = createForm(errorEl);
 
-  FIELDS.forEach(({ name, placeholder, ...attrs }) => {
-    form.append(createElement('input', {
-      className: 'form-input',
-      attrs: { name, placeholder, required: '', ...attrs }
-    }));
-  });
+  form.addEventListener('submit', (event) => handleSubmit(event, { form, errorEl, navigate }));
 
-  form.append(
-    errorEl,
-    createElement('button', { className: 'button button--primary', text: 'Добавить запись', attrs: { type: 'submit' } })
+  page.append(
+    createElement('h1', { className: 'page-title page-title--center', text: 'Добавить запись' }),
+    form
   );
-
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-
-    const formData = new FormData(form);
-    const failed = Object.entries(validators)
-      .find(([name, { validate }]) => !validate(formData.get(name) ?? ''));
-
-    if (failed) {
-      const [name, { message }] = failed;
-      errorEl.textContent = message;
-      form.querySelector(`[name="${name}"]`).focus();
-      return;
-    }
-
-    const item = { id: Date.now(), ...Object.fromEntries(formData) };
-    item.weight = +item.weight;
-
-    const isAdded = addItem(item);
-
-    if (!isAdded) {
-      errorEl.textContent = 'Не удалось сохранить запись';
-      return;
-    }
-
-    navigate('list');
-  });
-
-  page.append(form);
 
   return page;
 };
